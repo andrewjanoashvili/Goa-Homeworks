@@ -1,0 +1,6 @@
+number = input()
+print(type(number))
+number1 = int(number)
+print(type(number1))
+number2 = float(number1)
+print(type(number2))
