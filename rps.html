@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="mega game" content="width=device-width,initial-scale=1" />
+  <title>Andria Janoashvili's game</title>
+  <style>
+    :root{
+      --bg:#071026; --card:#071827; --accent:#7c3aed; --muted:#9aa8bf; --win:#16a34a; --lose:#ef4444; --glass: rgba(255,255,255,0.03);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: radial-gradient(800px 400px at 10% 10%, rgba(124,58,237,0.06), transparent),
+                  linear-gradient(180deg,var(--bg) 0%, #041226 100%);
+      color:#e6eef8; display:flex; align-items:center; justify-content:center; padding:28px;
+    }
+
+    .wrap{width:100%;max-width:980px}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .subtitle{color:var(--muted);font-size:13px}
+
+    .board{background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent); border:1px solid rgba(255,255,255,0.04); padding:20px; border-radius:14px; backdrop-filter: blur(6px);}
+
+    .top{display:flex;gap:12px;align-items:center;justify-content:space-between}
+    .score{display:flex;gap:10px;align-items:center}
+    .score .card{background:linear-gradient(180deg, rgba(255,255,255,0.012), rgba(255,255,255,0.02)); padding:10px 14px;border-radius:10px;min-width:110px;text-align:center;box-shadow:inset 0 -6px 18px rgba(2,6,23,0.3)}
+    .score .num{font-size:20px;font-weight:700}
+    .controls{display:flex; gap:8px; align-items:center}
+    .btn{background:var(--glass); border:1px solid rgba(255,255,255,0.04); color:inherit; padding:8px 12px; border-radius:10px; cursor:pointer}
+    .small{font-size:12px;padding:6px 8px}
+
+    .arena{display:grid;grid-template-columns:1fr 260px 1fr;gap:18px;align-items:center;margin-top:18px}
+    .player, .computer{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .label{color:var(--muted);font-size:13px}
+
+    .hand{width:180px;height:180px;border-radius:16px;background:linear-gradient(180deg,#0b1220, #071027);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03); box-shadow: 0 10px 30px rgba(2,6,23,0.6);transition:transform .22s}
+    .hand.reveal{transform:translateY(-6px) scale(1.02)}
+    .hand .icon{width:110px;height:110px;display:inline-block;opacity:0; transform:translateY(10px) scale(.96); transition:all .28s cubic-bezier(.2,.9,.3,1)}
+    .hand.reveal .icon{opacity:1; transform:translateY(0) scale(1)}
+
+    .center{display:flex;flex-direction:column;align-items:center;gap:12px}
+    .choices{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+    .choice{width:78px;height:78px;border-radius:999px;background:linear-gradient(180deg, rgba(255,255,255,0.015), transparent);display:flex;align-items:center;justify-content:center;border:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:transform .16s, box-shadow .16s, background .18s}
+    .choice:hover{transform:translateY(-8px); box-shadow:0 14px 38px rgba(2,6,23,0.6)}
+    .choice:active{transform:translateY(-2px) scale(.98)}
+    .choice.selected{outline:6px solid rgba(124,58,237,0.12)}
+    .choice[disabled]{opacity:.45;cursor:not-allowed}
+
+    .result{font-weight:700;font-size:18px;color:var(--muted);min-height:28px;transition:color .18s}
+
+    .highlight-win{color:var(--win)}
+    .highlight-lose{color:var(--lose)}
+
+    .history{margin-top:10px;color:var(--muted);font-size:13px;display:flex;gap:8px;flex-wrap:wrap}
+    .round{background:rgba(255,255,255,0.02);padding:6px 8px;border-radius:8px;border:1px solid rgba(255,255,255,0.02);font-size:13px}
+
+    @keyframes pulseWin{0%{box-shadow:0 0 0 rgba(22,163,74,0.0)}50%{box-shadow:0 0 28px rgba(22,163,74,0.12)}100%{box-shadow:0 0 0 rgba(22,163,74,0.0)}}
+    @keyframes pulseLose{0%{box-shadow:0 0 0 rgba(239,68,68,0.0)}50%{box-shadow:0 0 28px rgba(239,68,68,0.12)}100%{box-shadow:0 0 0 rgba(239,68,68,0.0)}}
+
+    /* confetti container (on top) */
+    #confetti-root{position:fixed;left:0;top:0;right:0;bottom:0;pointer-events:none;overflow:visible}
+
+    @media (max-width:820px){.arena{grid-template-columns:1fr;}.hand{width:140px;height:140px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>Rock · Paper · Scissors — Ultimate</h1>
+        <div class="subtitle">Click or press R/P/S (1/2/3) — first to win best-of. Now with sound, history, and high-score.</div>
+      </div>
+      <div class="controls">
+        <button class="btn small" id="reset">Reset</button>
+        <button class="btn small" id="resetHigh">Reset High</button>
+        <button class="btn small" id="bestOf">Best of 5</button>
+      </div>
+    </header>
+
+    <section class="board">
+      <div class="top">
+        <div class="score">
+          <div class="card">
+            <div class="label">You</div>
+            <div class="num" id="playerScore">0</div>
+          </div>
+          <div class="card">
+            <div class="label">Ties</div>
+            <div class="num" id="ties">0</div>
+          </div>
+          <div class="card">
+            <div class="label">Computer</div>
+            <div class="num" id="compScore">0</div>
+          </div>
+          <div class="card" title="Best match wins stored locally">
+            <div class="label">High Wins</div>
+            <div class="num" id="highWins">0</div>
+          </div>
+        </div>
+        <div>
+          <div class="result" id="result">Make your move</div>
+          <div class="subtitle" style="text-align:right;font-size:12px;margin-top:6px;color:var(--muted)" id="roundLabel">Round 0</div>
+        </div>
+      </div>
+
+      <div class="arena">
+        <div class="player">
+          <div class="label">You</div>
+          <div class="hand" id="playerHand" aria-hidden="true"><div class="icon" id="playerIcon"></div></div>
+        </div>
+
+        <div class="center">
+          <div class="choices" role="group" aria-label="choices">
+            <button class="choice" data-move="rock" title="Rock (1 or R)">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 2l3 5 6 1-4 4 1 6-6-3-6 3 1-6-4-4 6-1 3-5z" fill="currentColor"/></svg>
+            </button>
+            <button class="choice" data-move="paper" title="Paper (2 or P)">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" fill="currentColor"/></svg>
+            </button>
+            <button class="choice" data-move="scissors" title="Scissors (3 or S)">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2 4l8 8m0 0L2 20m8-8l10 10M10 12l10-10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+          <div style="font-size:12px;color:var(--muted);margin-top:6px">Keyboard: 1=Rock 2=Paper 3=Scissors</div>
+          <div class="history" id="history"></div>
+        </div>
+
+        <div class="computer">
+          <div class="label">Computer</div>
+          <div class="hand" id="compHand" aria-hidden="true"><div class="icon" id="compIcon"></div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="confetti-root"></div>
+
+  <script>
+    // Enhanced RPS logic: sound via WebAudio, high-score persistence, history, UX polish
+    const choices = ['rock','paper','scissors'];
+    const beats = {rock:'scissors', paper:'rock', scissors:'paper'};
+
+    const playerScoreEl = document.getElementById('playerScore');
+    const compScoreEl = document.getElementById('compScore');
+    const tiesEl = document.getElementById('ties');
+    const resultEl = document.getElementById('result');
+    const playerIcon = document.getElementById('playerIcon');
+    const compIcon = document.getElementById('compIcon');
+    const playerHand = document.getElementById('playerHand');
+    const compHand = document.getElementById('compHand');
+    const confettiRoot = document.getElementById('confetti-root');
+    const historyEl = document.getElementById('history');
+    const roundLabel = document.getElementById('roundLabel');
+    const highWinsEl = document.getElementById('highWins');
+
+    let playerScore = 0, compScore = 0, ties = 0; let bestOf = 5; let round = 0; let busy=false;
+
+    // WebAudio simple sound feedback (no external files)
+    const audioCtx = (typeof AudioContext !== 'undefined') ? new AudioContext() : null;
+    function playBeep(type='click'){
+      if(!audioCtx) return;
+      const now = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type==='win' ? 'sine' : type==='lose' ? 'triangle' : 'square';
+      o.frequency.value = type==='win' ? 880 : type==='lose' ? 220 : 520;
+      g.gain.value = 0.0001;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(now);
+      g.gain.linearRampToValueAtTime(0.08, now+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, now+0.26);
+      o.stop(now+0.28);
+    }
+
+    function setIcon(el, move){
+      const map = {
+        rock: '<svg viewBox="0 0 64 64" width="110" height="110" fill="currentColor"><path d="M32 6c6 0 10 3 15 7 6 5 9 11 9 20 0 11-10 22-24 22S9 44 9 33c0-9 3-15 9-20 5-4 9-7 15-7z"/></svg>',
+        paper: '<svg viewBox="0 0 64 64" width="110" height="110" fill="currentColor"><path d="M16 8h28v48H16z"/></svg>',
+        scissors: '<svg viewBox="0 0 64 64" width="110" height="110" fill="currentColor">\n          <path d="M10 12l22 20L10 52" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>\n          <circle cx="50" cy="20" r="6" fill="currentColor"/>\n          <circle cx="50" cy="44" r="6" fill="currentColor"/>\n        </svg>'
+      };
+      el.innerHTML = map[move] || '';
+      const parent = el.parentElement;
+      parent.classList.remove('reveal');
+      void parent.offsetWidth; // force reflow
+      parent.classList.add('reveal');
+    }
+
+    function randChoice(){ return choices[Math.floor(Math.random()*choices.length)]; }
+
+    function animateShake(){
+      playerHand.animate([{transform:'translateY(0)'},{transform:'translateY(-10px)'},{transform:'translateY(0)'}], {duration:360, easing:'cubic-bezier(.2,.9,.3,1)'});
+      compHand.animate([{transform:'translateY(0)'},{transform:'translateY(-10px)'},{transform:'translateY(0)'}], {duration:360, easing:'cubic-bezier(.2,.9,.3,1)'});
+    }
+
+    function createConfettiBurst(){
+      // small DOM confetti — lightweight
+      for(let i=0;i<28;i++){
+        const el = document.createElement('div');
+        el.style.position='fixed'; el.style.left=(window.innerWidth/2 + (Math.random()-0.5)*240) + 'px';
+        el.style.top=(120 + (Math.random()-0.5)*40) + 'px';
+        el.style.width=(6+Math.random()*8)+'px'; el.style.height=(6+Math.random()*8)+'px';
+        el.style.background=['#f97316','#fb7185','#34d399','#60a5fa'][Math.floor(Math.random()*4)];
+        el.style.borderRadius='3px'; el.style.opacity='0.95';
+        el.style.transform = `translateY(${-(100+Math.random()*200)}px) rotate(${Math.random()*360}deg)`;
+        el.style.transition = 'transform 1100ms cubic-bezier(.2,.9,.3,1), opacity 1100ms';
+        document.body.appendChild(el);
+        setTimeout(()=>{ el.style.transform = `translateY(${300+Math.random()*300}px) rotate(${Math.random()*720}deg)`; el.style.opacity='0'; }, 20);
+        setTimeout(()=> el.remove(), 1400);
+      }
+    }
+
+    function roundResult(playerMove, compMove){
+      if(playerMove === compMove) return 'tie';
+      if(beats[playerMove] === compMove) return 'player';
+      return 'comp';
+    }
+
+    function updateScores(){
+      playerScoreEl.textContent = playerScore;
+      compScoreEl.textContent = compScore;
+      tiesEl.textContent = ties;
+      document.getElementById('roundLabel').textContent = `Round ${round}`;
+      const stored = Number(localStorage.getItem('rps_high_wins') || 0);
+      highWinsEl.textContent = stored;
+    }
+
+    function pushHistory(text){
+      const el = document.createElement('div'); el.className='round'; el.textContent = text; historyEl.prepend(el);
+      // limit history length
+      while(historyEl.children.length>8) historyEl.removeChild(historyEl.lastChild);
+    }
+
+    function handleChoice(playerMove){
+      if(busy) return; busy=true;
+      document.querySelectorAll('.choice').forEach(c=> c.disabled=true);
+      animateShake(); playBeep('click');
+      setTimeout(()=>{
+        const compMove = randChoice(); round++;
+        setIcon(playerIcon, playerMove); setIcon(compIcon, compMove);
+        const winner = roundResult(playerMove, compMove);
+        if(winner==='player'){
+          playerScore++; resultEl.textContent='You win this round!'; resultEl.classList.add('highlight-win'); resultEl.classList.remove('highlight-lose'); playBeep('win'); createConfettiBurst(); playerHand.style.animation = 'pulseWin 700ms ease-out';
+        } else if(winner==='comp'){
+          compScore++; resultEl.textContent='Computer wins this round'; resultEl.classList.add('highlight-lose'); resultEl.classList.remove('highlight-win'); playBeep('lose'); compHand.style.animation = 'pulseLose 700ms ease-out';
+        } else { ties++; resultEl.textContent='Tie — try again'; resultEl.classList.remove('highlight-win','highlight-lose'); playBeep('click'); }
+        pushHistory(`#${round}: You ${playerMove} — CPU ${compMove} → ${winner==='player'?'You':'tie'===winner?'Tie':'CPU'}`);
+        updateScores();
+        setTimeout(()=>{ document.querySelectorAll('.choice').forEach(c=> c.disabled=false); busy=false; playerHand.style.animation=''; compHand.style.animation=''; checkMatchEnd(); }, 520);
+      }, 380);
+    }
+
+    function checkMatchEnd(){
+      const target = Math.ceil(bestOf/2);
+      if(playerScore>=target || compScore>=target){
+        const winnerText = playerScore>compScore? 'You won the match! 🎉' : 'Computer wins the match';
+        resultEl.textContent = winnerText;
+        if(playerScore>compScore){ createConfettiBurst(); saveHighScore(playerScore); }
+        // disable choices until reset
+        document.querySelectorAll('.choice').forEach(c=> c.disabled=true);
+      }
+    }
+
+    function saveHighScore(value){
+      const key='rps_high_wins';
+      const prev = Number(localStorage.getItem(key) || 0);
+      if(value>prev){ localStorage.setItem(key, String(value)); updateScores(); }
+    }
+
+    document.querySelectorAll('.choice').forEach(btn=> btn.addEventListener('click', ()=> handleChoice(btn.dataset.move)));
+
+    document.getElementById('reset').addEventListener('click', ()=>{
+      playerScore=0; compScore=0; ties=0; round=0; updateScores(); resultEl.textContent='Make your move'; playerIcon.innerHTML=''; compIcon.innerHTML=''; historyEl.innerHTML=''; document.querySelectorAll('.choice').forEach(c=> c.disabled=false);
+    });
+
+    document.getElementById('resetHigh').addEventListener('click', ()=>{ localStorage.removeItem('rps_high_wins'); updateScores(); });
+
+    document.getElementById('bestOf').addEventListener('click', (e)=>{
+      bestOf = bestOf===3?5: bestOf===5?7:3; e.target.textContent = `Best of ${bestOf}`; document.getElementById('reset').click();
+    });
+
+    window.addEventListener('keydown', (ev)=>{
+      if(ev.key === '1' || ev.key.toLowerCase()==='r') document.querySelector('[data-move="rock"]').click();
+      if(ev.key === '2' || ev.key.toLowerCase()==='p') document.querySelector('[data-move="paper"]').click();
+      if(ev.key === '3' || ev.key.toLowerCase()==='s') document.querySelector('[data-move="scissors"]').click();
+    });
+
+    // accessibility live region
+    const live = document.createElement('div'); live.setAttribute('aria-live','polite'); live.style.position='absolute'; live.style.left='-9999px'; document.body.appendChild(live);
+    const observer = new MutationObserver(()=> live.textContent = resultEl.textContent);
+    observer.observe(resultEl, {childList:true, characterData:true, subtree:true});
+
+    // init
+    document.getElementById('bestOf').textContent = `Best of ${bestOf}`;
+    updateScores();
+  </script>
+</body>
+  </html>
