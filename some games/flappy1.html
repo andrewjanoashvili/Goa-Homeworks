@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flappy Adventure — flappy1</title>
+  <link rel="stylesheet" href="flappy2.css">
+</head>
+<body>
+  <div class="container">
+
+
+    <!-- Decorative sky (sun + moving clouds) -->
+    <div class="sky" aria-hidden="true">
+      <div class="sun" id="sun">
+        <div class="sun-face">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="smile"></div>
+        </div>
+      </div>
+      <div class="cloud cloud1"></div>
+      <div class="cloud cloud2"></div>
+      <div class="cloud cloud3"></div>
+    </div>
+    <header>
+      <h1>Flappy Adventure</h1>
+      <div class="top-info">Coins: <span id="coins">0</span> • Streak: <span id="streak">0</span></div>
+    </header>
+
+    <main>
+      <aside class="menu" id="menu">
+        <button id="btn-play">Play Level 1</button>
+        <button id="btn-levels">Choose Level</button>
+        <button id="btn-shop">Shop (Crates)</button>
+        <button id="btn-hardcore">Hardcore Mode</button>
+        <button id="btn-changelog">Changelog</button>
+        <button id="btn-streak">View Streak</button>
+        <div class="menu-note">Tip: press Space to flap, E to shoot in boss fights, P to pause.</div>
+      </aside>
+
+      <section class="game-area">
+        <canvas id="game" width="480" height="640" aria-label="Flappy game"></canvas>
+        <div class="hud" id="hud">
+          <div id="scoreBox">Score: <span id="score">0</span></div>
+          <div id="levelBox">Level: <span id="level">1</span></div>
+          <div style="margin-left:12px"><button id="menuBtn" class="small">Menu (Q)</button></div>
+        </div>
+      </section>
+
+      <aside class="panel" id="panel-right">
+        <div id="panel-content"></div>
+      </aside>
+    </main>
+
+    <footer>
+      <small>Prototype Flappy with shop, crates, and boss fights.</small>
+    </footer>
+  </div>
+
+  <template id="shop-template">
+    <div class="shop">
+      <h2>Shop</h2>
+      <div class="shop-row">
+        <div class="crate">
+          <h3>Skin Crate</h3>
+          <div>Price: <span id="skinPrice">100</span></div>
+          <button id="buySkin">Buy Skin Crate</button>
+        </div>
+        <div class="crate">
+          <h3>Map Crate</h3>
+          <div>Price: <span id="mapPrice">150</span></div>
+          <button id="buyMap">Buy Map Crate</button>
+        </div>
+      </div>
+      <div class="inventory"><h4>Unlocked Skins</h4><div id="skinsList"></div></div>
+    </div>
+  </template>
+
+  <template id="changelog-template">
+    <div class="shop">
+      <h2>Changelog</h2>
+      <div id="changelog-list" style="max-height:280px;overflow:auto;padding-right:6px"></div>
+    </div>
+  </template>
+
+  <script src="flappy3.js"></script>
+  <script>
+    // Small changelog UI for the original flappy1 page. This keeps a local changelog you can view from the menu.
+    (function(){
+      const CHANGELOG = [
+        {date:'2025-11-09', title:'Changelog added', notes:'Added an in-game Changelog panel reachable from the menu.'},
+        {date:'2025-11-09', title:'Hardcore mode', notes:'hardcore mode added, which gives x2 coins'}
+      ];
+      function showChangelog(){
+        const menu = document.getElementById('menu'); const panel = document.getElementById('panel-content');
+        if(!panel) return; menu.style.display='none'; panel.innerHTML='';
+        const tpl = document.getElementById('changelog-template').content.cloneNode(true);
+        panel.appendChild(tpl);
+        const list = panel.querySelector('#changelog-list');
+        CHANGELOG.forEach(entry=>{
+          const d = document.createElement('div'); d.style.padding='8px 6px'; d.style.borderBottom='1px solid rgba(0,0,0,0.06)';
+          d.innerHTML = `<strong>${entry.date} — ${entry.title}</strong><div style="font-size:13px;margin-top:4px;color:#034">${entry.notes}</div>`;
+          list.appendChild(d);
+        });
+        const backBtn = document.createElement('button'); backBtn.textContent='Back to Menu'; backBtn.className='small'; backBtn.style.marginTop='8px';
+        backBtn.addEventListener('click', ()=>{ panel.innerHTML=''; menu.style.display='block'; });
+        panel.appendChild(backBtn);
+      }
+      const btn = document.getElementById('btn-changelog'); if(btn) btn.addEventListener('click', showChangelog);
+    })();
+  </script>
+</body>
+</html>

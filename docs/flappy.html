@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flappy Adventure — Online</title>
+  <style>
+  /* inlined from flappy2.css */
+:root{--bg:#87ceeb;--panel:#ffffffaa;--accent:#ff6b6b}
+*{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+body{margin:0;background:linear-gradient(#87ceeb,#6ec6ff);color:#042}
+.container{max-width:1100px;margin:12px auto;padding:12px}
+/* place sky behind content */
+.container{position:relative;z-index:1}
+/* sky layer sits behind everything inside .container */
+.sky{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+
+/* smiling sun */
+.sun{position:absolute;right:60px;top:40px;width:120px;height:120px;border-radius:50%;background:linear-gradient(180deg,#fff27a,#ffd54a);box-shadow:0 8px 30px rgba(255,200,60,0.2);display:flex;align-items:center;justify-content:center}
+.sun-face{position:relative;width:70%;height:70%}
+.sun-face .eye{position:absolute;width:10px;height:10px;background:#6b3b00;border-radius:50%;top:28%}
+.sun-face .eye.left{left:22%}
+.sun-face .eye.right{right:22%}
+.sun-face .smile{position:absolute;left:18%;right:18%;bottom:20%;height:10px;border-bottom:4px solid #6b3b00;border-radius:0 0 20px 20px}
+
+/* clouds */
+.cloud{position:absolute;background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+.cloud:before,.cloud:after{content:'';position:absolute;background:inherit;border-radius:inherit}
+.cloud1{width:160px;height:48px;left:-220px;top:80px}
+.cloud1:before{width:80px;height:64px;border-radius:50%;left:20px;top:-26px}
+.cloud1:after{width:100px;height:64px;border-radius:50%;left:60px;top:-20px}
+.cloud2{width:220px;height:60px;left:-420px;top:160px;opacity:0.95}
+.cloud2:before{width:110px;height:80px;border-radius:50%;left:30px;top:-30px}
+.cloud2:after{width:130px;height:80px;border-radius:50%;left:90px;top:-24px}
+.cloud3{width:120px;height:40px;left:-160px;top:220px;opacity:0.9}
+.cloud3:before{width:60px;height:48px;border-radius:50%;left:10px;top:-22px}
+.cloud3:after{width:80px;height:48px;border-radius:50%;left:40px;top:-18px}
+
+/* cloud animations: move from left to right */
+@keyframes cloud-move-fast{from{transform:translateX(-100%)}to{transform:translateX(140%)} }
+@keyframes cloud-move-slow{from{transform:translateX(-120%)}to{transform:translateX(120%)} }
+.cloud1{animation:cloud-move-fast 26s linear infinite}
+.cloud2{animation:cloud-move-slow 46s linear infinite}
+.cloud3{animation:cloud-move-fast 34s linear infinite}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0}
+main{display:flex;gap:12px;margin-top:12px}
+.menu{width:220px;background:var(--panel);padding:12px;border-radius:8px}
+.menu button{display:block;width:100%;margin-bottom:8px;padding:10px;border-radius:6px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+.menu-note{font-size:12px;color:#034;margin-top:8px}
+.game-area{flex:1;display:flex;flex-direction:column;align-items:center}
+canvas{background:linear-gradient(#b8f0ff,#87ceeb);border-radius:8px;box-shadow:0 8px 24px rgba(2,6,23,0.2)}
+.panel{width:260px;background:var(--panel);padding:12px;border-radius:8px}
+.hud{display:flex;gap:12px;justify-content:center;margin-top:8px}
+#panel-content{min-height:120px}
+.shop{padding:8px}
+.shop-row{display:flex;gap:8px}
+.crate{background:#fff;padding:10px;border-radius:6px;flex:1}
+.inventory{margin-top:10px}
+button.small{padding:6px 8px}
+footer{margin-top:12px;color:#034}
+.badge{display:inline-block;padding:4px 8px;background:#fff5;border-radius:6px;margin:4px;border:1px solid #ddd}
+  </style>
+</head>
+<body>
+  <div class="container">
+
+
+    <!-- Decorative sky (sun + moving clouds) -->
+    <div class="sky" aria-hidden="true">
+      <div class="sun" id="sun">
+        <div class="sun-face">
+          <div class="eye left"></div>
+          <div class="eye right"></div>
+          <div class="smile"></div>
+        </div>
+      </div>
+      <div class="cloud cloud1"></div>
+      <div class="cloud cloud2"></div>
+      <div class="cloud cloud3"></div>
+    </div>
+    <header>
+      <h1>Flappy Adventure</h1>
+      <div class="top-info">Coins: <span id="coins">0</span> • Streak: <span id="streak">0</span></div>
+    </header>
+
+    <main>
+      <aside class="menu" id="menu">
+        <button id="btn-play">Play Level 1</button>
+        <button id="btn-levels">Choose Level</button>
+        <button id="btn-shop">Shop (Crates)</button>
+        <button id="btn-hardcore">Hardcore Mode</button>
+        <button id="btn-changelog">Changelog</button>
+        <button id="btn-streak">View Streak</button>
+        <div class="menu-note">Tip: press Space to flap, E to shoot in boss fights, P to pause.</div>
+      </aside>
+
+      <section class="game-area">
+        <canvas id="game" width="480" height="640" aria-label="Flappy game"></canvas>
+        <div class="hud" id="hud">
+          <div id="scoreBox">Score: <span id="score">0</span></div>
+          <div id="levelBox">Level: <span id="level">1</span></div>
+          <div style="margin-left:12px"><button id="menuBtn" class="small">Menu (Q)</button></div>
+        </div>
+      </section>
+
+      <aside class="panel" id="panel-right">
+        <div id="panel-content"></div>
+      </aside>
+    </main>
+
+    <footer>
+      <small>Prototype Flappy with shop, crates, and boss fights.</small>
+    </footer>
+  </div>
+
+  <template id="shop-template">
+    <div class="shop">
+      <h2>Shop</h2>
+      <div class="shop-row">
+        <div class="crate">
+          <h3>Skin Crate</h3>
+          <div>Price: <span id="skinPrice">100</span></div>
+          <button id="buySkin">Buy Skin Crate</button>
+        </div>
+        <div class="crate">
+          <h3>Map Crate</h3>
+          <div>Price: <span id="mapPrice">150</span></div>
+          <button id="buyMap">Buy Map Crate</button>
+        </div>
+      </div>
+      <div class="inventory"><h4>Unlocked Skins</h4><div id="skinsList"></div></div>
+    </div>
+  </template>
+
+  <template id="changelog-template">
+    <div class="shop">
+      <h2>Changelog</h2>
+      <div id="changelog-list" style="max-height:280px;overflow:auto;padding-right:6px"></div>
+    </div>
+  </template>
+
+  <script>
+  // inlined from flappy3.js (kept intact, small edits avoided)
+  (function(){
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+
+  // Game states
+  const STATE = {MENU:0, PLAYING:1, SHOP:2, LEVEL_SELECT:3, BOSS:4, CHANGELOG:5};
+  let state = STATE.MENU;
+
+  // Persistent data
+  const storage = {
+    coins: Number(localStorage.getItem('fl_coins')||0),
+    streak: Number(localStorage.getItem('fl_streak')||0),
+    bestStreak: Number(localStorage.getItem('fl_bestStreak')||0),
+    skins: JSON.parse(localStorage.getItem('fl_skins')||'[]'),
+    purchases: JSON.parse(localStorage.getItem('fl_purchases')||'{}'),
+    unlockedLevels: JSON.parse(localStorage.getItem('fl_unlocked')||'[1]'), // levels unlocked by id
+    mapMultiplier: Number(localStorage.getItem('fl_mapMult')||1)
+  };
+
+  function save(){ localStorage.setItem('fl_coins', storage.coins); localStorage.setItem('fl_streak', storage.streak);
+    localStorage.setItem('fl_bestStreak', storage.bestStreak); localStorage.setItem('fl_skins', JSON.stringify(storage.skins));
+    localStorage.setItem('fl_purchases', JSON.stringify(storage.purchases)); localStorage.setItem('fl_unlocked', JSON.stringify(storage.unlockedLevels));
+    localStorage.setItem('fl_mapMult', storage.mapMultiplier);
+  }
+
+  // UI refs
+  const coinsEl = document.getElementById('coins'); const streakEl = document.getElementById('streak');
+  const scoreEl = document.getElementById('score'); const levelEl = document.getElementById('level');
+  const panel = document.getElementById('panel-content'); const menu = document.getElementById('menu');
+
+  function updateUI(){ coinsEl.textContent = storage.coins; streakEl.textContent = storage.streak; }
+  updateUI();
+
+  // Levels config
+  const levels = [
+    null,
+    {id:1, pipeSpeed:2.2, gap:140, pipeFreq:2200, length:50, bossHP:30, reward:50},
+    {id:2, pipeSpeed:2.8, gap:120, pipeFreq:1200, length:10, bossHP:50, reward:200},
+    {id:3, pipeSpeed:3.4, gap:100, pipeFreq:1000, length:12, bossHP:80, reward:400}
+  ];
+
+  let currentLevel = 1;
+
+  let hardcoreMode = false; // when true, endless mode with higher coin rewards
+
+  // Changelog entries (chronological - newest first)
+  const CHANGELOG = [
+    {date:'2025-11-09', title:'Changelog added', notes:'Added an in-game Changelog panel reachable from the menu.'},
+    
+  ];
+
+  // Player
+  const player = {x:80,y:H/2,vy:0,r:18,alive:true,skin:null,canShoot:false};
+  const gravity = 0.45; const flap = -6;
+
+  // Game variables
+  let pipes = [], coins = [], score=0, lastPipe=0, pipeCount=0, lastTime=0, running=false, paused=false;
+
+  // Boss
+  let boss = null; // {hp,x,y,w,h,lastFire}
+
+  // Shop pricing
+  function price(key, base){ const bought = Number(storage.purchases[key]||0); return Math.ceil(base * Math.pow(1.25, bought)); }
+
+  // Crate logic
+  function openCrate(type){
+    const roll = Math.random()*100; let rarity='common'; if(roll>95) rarity='epic'; else if(roll>70) rarity='rare';
+    if(type==='skin'){
+      const id = `skin_${rarity}_${Math.floor(Math.random()*1000)}`;
+      storage.skins.push({id,rarity}); storage.purchases['skin']=(Number(storage.purchases['skin']||0)+1);
+      save(); updateUI(); return {type:'skin',id,rarity};
+    } else {
+      storage.purchases['map']=(Number(storage.purchases['map']||0)+1);
+      if(rarity==='epic'){ storage.mapMultiplier += 0.3; save(); updateUI(); return {type:'map',effect:'+30% coins',rarity}; }
+      if(rarity==='rare'){ storage.mapMultiplier += 0.12; save(); updateUI(); return {type:'map',effect:'+12% coins',rarity}; }
+      storage.mapMultiplier += 0.04; save(); updateUI(); return {type:'map',effect:'+4% coins',rarity};
+    }
+  }
+
+  // menu buttons
+  document.getElementById('btn-play').addEventListener('click', ()=> startLevel(1));
+  document.getElementById('btn-shop').addEventListener('click', showShop);
+  document.getElementById('btn-levels').addEventListener('click', showLevels);
+  const hardcoreBtn = document.getElementById('btn-hardcore'); if(hardcoreBtn) hardcoreBtn.addEventListener('click', startHardcore);
+  document.getElementById('btn-changelog').addEventListener('click', showChangelog);
+  document.getElementById('btn-streak').addEventListener('click', ()=> alert(`Streak: ${storage.streak}\nBest: ${storage.bestStreak}`));
+
+  function showShop(){ menu.style.display='none'; panel.innerHTML = '';
+  const tpl = document.getElementById('shop-template').content.cloneNode(true);
+  const backBtn = document.createElement('button'); backBtn.textContent = 'Back to Menu'; backBtn.className = 'small';
+  backBtn.style.marginTop = '8px';
+  backBtn.addEventListener('click', ()=>{ panel.innerHTML=''; menu.style.display='block'; state = STATE.MENU; });
+  panel.appendChild(backBtn);
+    panel.appendChild(tpl);
+    const skinPriceEl = panel.querySelector('#skinPrice'); const mapPriceEl = panel.querySelector('#mapPrice');
+    function refreshPrices(){ skinPriceEl.textContent = price('skin', 100); mapPriceEl.textContent = price('map', 150); }
+    refreshPrices();
+    panel.querySelector('#buySkin').addEventListener('click', ()=>{
+  const cost = price('skin',100); if(storage.coins < cost){ alert('Not enough coins'); return; }
+      storage.coins -= cost; save(); updateUI(); const reward = openCrate('skin'); alert(`You opened a ${reward.rarity} skin: ${reward.id}`); refreshPrices(); renderSkins();
+    });
+    panel.querySelector('#buyMap').addEventListener('click', ()=>{
+      const cost = price('map',150); if(storage.coins < cost){ alert('Not enough coins'); return; }
+      storage.coins -= cost; save(); updateUI(); const reward = openCrate('map'); alert(`You opened a ${reward.rarity} map crate: ${reward.effect}`); refreshPrices();
+    });
+    renderSkins(); state = STATE.SHOP; }
+
+  function showChangelog(){ menu.style.display = 'none'; panel.innerHTML = '';
+    const tpl = document.getElementById('changelog-template').content.cloneNode(true);
+    panel.appendChild(tpl);
+    const list = panel.querySelector('#changelog-list');
+    if(list){
+      CHANGELOG.forEach(entry=>{
+        const d = document.createElement('div');
+        d.style.padding = '8px 6px'; d.style.borderBottom = '1px solid rgba(0,0,0,0.06)';
+        d.innerHTML = `<strong>${entry.date} — ${entry.title}</strong><div style="font-size:13px;margin-top:4px;color:#034">${entry.notes}</div>`;
+        list.appendChild(d);
+      });
+    }
+    const backBtn = document.createElement('button'); backBtn.textContent = 'Back to Menu'; backBtn.className = 'small'; backBtn.style.marginTop = '8px';
+    backBtn.addEventListener('click', ()=>{ panel.innerHTML=''; menu.style.display='block'; state = STATE.MENU; });
+    panel.appendChild(backBtn);
+    state = STATE.CHANGELOG;
+  }
+
+  function renderSkins(){ const list = panel.querySelector('#skinsList'); if(!list) return; list.innerHTML = '';
+    storage.skins.forEach(s=>{ const d = document.createElement('div'); d.className='badge'; d.textContent = `${s.rarity} — ${s.id}`; list.appendChild(d); }); }
+
+  function showLevels(){ menu.style.display='none'; panel.innerHTML='';
+    const div = document.createElement('div'); div.innerHTML = '<h3>Levels</h3>';
+    levels.forEach(l=>{ if(!l) return; const b = document.createElement('button'); b.textContent = `Level ${l.id} ${storage.unlockedLevels.includes(l.id)?'Unlocked':'Locked'}`; b.disabled=!storage.unlockedLevels.includes(l.id); b.addEventListener('click', ()=> startLevel(l.id)); div.appendChild(b); });
+    panel.appendChild(div); state = STATE.LEVEL_SELECT; }
+
+  function startLevel(id){ hardcoreMode = false; currentLevel = id; levelEl.textContent = id; resetGame(levels[id]); menu.style.display='none'; panel.innerHTML=''; state = STATE.PLAYING; }
+
+  function startHardcore(){
+    hardcoreMode = true;
+    currentLevel = 1;
+    // tweak level 1 slightly for challenge
+    levels[1] = Object.assign({}, levels[1]);
+    levels[1].pipeSpeed = levels[1].pipeSpeed * 1.3;
+    levels[1].gap = Math.max(80, levels[1].gap - 20);
+    levelEl.textContent = 'HC';
+    resetGame(levels[1]); menu.style.display='none'; panel.innerHTML=''; state = STATE.PLAYING;
+  }
+
+  function resetGame(level){ pipes=[]; coins=[]; score=0; lastPipe=0; pipeCount=0; player.y = H/2; player.vy=0; player.alive=true; player.canShoot=false; running=true; paused=false; boss=null; updateUI(); updateScore(); }
+
+  function updateScore(){ scoreEl.textContent = score; }
+
+  // Game loop
+  let last = performance.now();
+  function loop(now){ const dt = now - last; last = now; if(state===STATE.PLAYING && !paused){ step(dt); } render(); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  function step(dt){ const lvl = levels[currentLevel]; lastPipe += dt; if((!hardcoreMode && pipeCount < lvl.length && lastPipe > lvl.pipeFreq) || (hardcoreMode && lastPipe > lvl.pipeFreq)){ spawnPipe(lvl); lastPipe=0; pipeCount++; }
+    for(let i=pipes.length-1;i>=0;i--){ pipes[i].x -= lvl.pipeSpeed; if(pipes[i].x + pipes[i].w < 0) pipes.splice(i,1); }
+    player.vy += gravity; player.y += player.vy; if(player.y < 0) { die(); }
+    if(player.y > H){ die(); }
+  for(const p of pipes){ if(collisionPipe(p, player)){ die(); } else if(!p.passed && p.x + p.w < player.x){ p.passed=true; score++; const basePerPipe = hardcoreMode ? 2 : 1; const awarded = Math.ceil(basePerPipe * storage.mapMultiplier); storage.coins += awarded; updateUI(); save(); }
+    }
+    if(!hardcoreMode && pipeCount >= lvl.length && pipes.length===0 && !boss){ startBoss(levels[currentLevel]); }
+    if(boss){ updateBoss(dt); }
+  }
+
+  function spawnPipe(lvl){ const w = 80; const gap = lvl.gap; const top = Math.random()*(H-gap-120)+60; pipes.push({x:W, y:0, w, h:top, gap, passed:false}); pipes.push({x:W, y:top+gap, w, h:H-(top+gap), passed:false, bottom:true}); }
+
+  function collisionPipe(p, pl){ if(p.bottom){ const rect = {x:p.x,y:p.y,w:p.w,h:p.h}; if(rect.x < pl.x+pl.r && rect.x+rect.w > pl.x-pl.r && rect.y < pl.y+pl.r && rect.y+rect.h > pl.y-pl.r) return true; }
+    else{ const rect = {x:p.x,y:p.y,w:p.w,h:p.h}; if(rect.x < pl.x+pl.r && rect.x+rect.w > pl.x-pl.r && rect.y < pl.y+pl.r && rect.y+rect.h > pl.y-pl.r) return true; }
+    return false;
+  }
+
+  function die(){ if(!player.alive) return; player.alive=false; running=false; if(storage.streak > storage.bestStreak) storage.bestStreak = storage.streak; storage.streak = 0; save(); updateUI(); alert('You died! Streak reset.'); hardcoreMode = false; state = STATE.MENU; menu.style.display='block'; }
+
+  function startBoss(lvl){ boss = {hp:lvl.bossHP, x:W-160, y:H/2, w:140, h:140, lastFire:0}; player.canShoot=true; player.x = 140; state = STATE.BOSS; }
+
+  function updateBoss(dt){ boss.lastFire += dt; if(boss.lastFire > 1200){ boss.lastFire = 0; spawnFire(); } }
+
+  const bullets = []; const fireballs = [];
+
+  function spawnFire(){ fireballs.push({x:boss.x, y:boss.y + (Math.random()*boss.h - boss.h/2), vx:-5 - Math.random()*3}); }
+
+  function updateBullets(dt){ for(let i=bullets.length-1;i>=0;i--){ bullets[i].x += bullets[i].vx; if(bullets[i].x > W){ bullets.splice(i,1); continue; } if(bullets[i].x > boss.x && bullets[i].x < boss.x + boss.w && Math.abs(bullets[i].y - boss.y) < boss.h/2){ boss.hp -= bullets[i].d; bullets.splice(i,1); if(boss.hp <=0) bossDefeated(); }
+    } for(let i=fireballs.length-1;i>=0;i--){ fireballs[i].x += fireballs[i].vx; if(fireballs[i].x < 0) fireballs.splice(i,1); if(Math.abs(fireballs[i].x - player.x) < 20 && Math.abs(fireballs[i].y - player.y) < 20){ die(); }
+    } }
+
+  function bossDefeated(){ const lvl = levels[currentLevel]; storage.coins += lvl.reward; storage.streak += 1; if(storage.streak > storage.bestStreak) storage.bestStreak = storage.streak;
+    if(levels[currentLevel+1] && !storage.unlockedLevels.includes(levels[currentLevel+1].id)) storage.unlockedLevels.push(levels[currentLevel+1].id);
+    save(); updateUI(); alert('Boss defeated! Coins awarded. Level unlocked.'); boss=null; player.canShoot=false; state = STATE.MENU; menu.style.display='block'; }
+
+  window.addEventListener('keydown', e=>{
+    if(state===STATE.PLAYING){ if(e.code==='Space'){ flapPlayer(); } if(e.code==='KeyP'){ paused=!paused; } }
+    if(state===STATE.BOSS){ if(e.code==='KeyE' && player.canShoot){ bullets.push({x:player.x+20,y:player.y, vx:8, d:5}); } if(e.code==='Space'){ flapPlayer(); } if(e.code==='KeyP'){ paused=!paused; } }
+    if(e.code === 'KeyQ'){
+      showInGameMenu();
+    }
+  });
+
+  function flapPlayer(){ if(!player.alive) return; player.vy = flap; }
+
+  function render(){ ctx.clearRect(0,0,W,H);
+    ctx.fillStyle='#87ceeb'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#2e8b57'; for(const p of pipes){ ctx.fillRect(p.x,p.y,p.w,p.h); }
+    ctx.fillStyle = '#ffdd57'; if(storage.skins.length) ctx.fillStyle = '#f97316'; ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='#fff'; for(const b of bullets) ctx.fillRect(b.x-3,b.y-2,6,4);
+    ctx.fillStyle='#f33'; for(const f of fireballs) ctx.beginPath(), ctx.arc(f.x,f.y,8,0,Math.PI*2), ctx.fill();
+    if(boss){ ctx.fillStyle='#555'; ctx.fillRect(boss.x-boss.w/2,boss.y-boss.h/2,boss.w,boss.h); ctx.fillStyle='#fff'; ctx.fillText(`HP:${boss.hp}`, boss.x-boss.w/2+8,boss.y-boss.h/2+20); }
+    scoreEl.textContent = score; coinsEl.textContent = storage.coins; streakEl.textContent = storage.streak; levelEl.textContent = currentLevel;
+  }
+
+  function spawnPipe(lvl){ const gap = lvl.gap; const top = Math.random()*(H-gap-120)+60; const w=80; pipes.push({x:W,y:0,w,h:top,passed:false}); pipes.push({x:W,y:top+gap,w,h:H-(top+gap),passed:false,bottom:true}); }
+
+  setInterval(()=>{ if(state===STATE.BOSS){ updateBullets(16); } }, 40);
+
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); if(state===STATE.PLAYING) flapPlayer(); if(state===STATE.MENU) startLevel(1); });
+  canvas.addEventListener('mousedown', e=>{ if(state===STATE.PLAYING) flapPlayer(); if(state===STATE.MENU) startLevel(1); });
+
+  const menuBtn = document.getElementById('menuBtn');
+  if(menuBtn) menuBtn.addEventListener('click', showInGameMenu);
+
+  window.startLevel = startLevel;
+
+  })();
+  </script>
+</body>
+</html>

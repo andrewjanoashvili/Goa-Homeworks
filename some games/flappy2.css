@@ -1,0 +1,54 @@
+:root{--bg:#87ceeb;--panel:#ffffffaa;--accent:#ff6b6b}
+*{box-sizing:border-box;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+body{margin:0;background:linear-gradient(#87ceeb,#6ec6ff);color:#042;}
+.container{max-width:1100px;margin:12px auto;padding:12px}
+/* place sky behind content */
+.container{position:relative;z-index:1}
+/* sky layer sits behind everything inside .container */
+.sky{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:hidden}
+
+/* smiling sun */
+.sun{position:absolute;right:60px;top:40px;width:120px;height:120px;border-radius:50%;background:linear-gradient(180deg,#fff27a,#ffd54a);box-shadow:0 8px 30px rgba(255,200,60,0.2);display:flex;align-items:center;justify-content:center}
+.sun-face{position:relative;width:70%;height:70%}
+.sun-face .eye{position:absolute;width:10px;height:10px;background:#6b3b00;border-radius:50%;top:28%}
+.sun-face .eye.left{left:22%}
+.sun-face .eye.right{right:22%}
+.sun-face .smile{position:absolute;left:18%;right:18%;bottom:20%;height:10px;border-bottom:4px solid #6b3b00;border-radius:0 0 20px 20px}
+
+/* clouds */
+.cloud{position:absolute;background:rgba(255,255,255,0.92);border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,0.08)}
+.cloud:before,.cloud:after{content:'';position:absolute;background:inherit;border-radius:inherit}
+.cloud1{width:160px;height:48px;left:-220px;top:80px}
+.cloud1:before{width:80px;height:64px;border-radius:50%;left:20px;top:-26px}
+.cloud1:after{width:100px;height:64px;border-radius:50%;left:60px;top:-20px}
+.cloud2{width:220px;height:60px;left:-420px;top:160px;opacity:0.95}
+.cloud2:before{width:110px;height:80px;border-radius:50%;left:30px;top:-30px}
+.cloud2:after{width:130px;height:80px;border-radius:50%;left:90px;top:-24px}
+.cloud3{width:120px;height:40px;left:-160px;top:220px;opacity:0.9}
+.cloud3:before{width:60px;height:48px;border-radius:50%;left:10px;top:-22px}
+.cloud3:after{width:80px;height:48px;border-radius:50%;left:40px;top:-18px}
+
+/* cloud animations: move from left to right */
+@keyframes cloud-move-fast{from{transform:translateX(-100%)}to{transform:translateX(140%)} }
+@keyframes cloud-move-slow{from{transform:translateX(-120%)}to{transform:translateX(120%)} }
+.cloud1{animation:cloud-move-fast 26s linear infinite}
+.cloud2{animation:cloud-move-slow 46s linear infinite}
+.cloud3{animation:cloud-move-fast 34s linear infinite}
+header{display:flex;justify-content:space-between;align-items:center}
+h1{margin:0}
+main{display:flex;gap:12px;margin-top:12px}
+.menu{width:220px;background:var(--panel);padding:12px;border-radius:8px}
+.menu button{display:block;width:100%;margin-bottom:8px;padding:10px;border-radius:6px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer}
+.menu-note{font-size:12px;color:#034;margin-top:8px}
+.game-area{flex:1;display:flex;flex-direction:column;align-items:center}
+canvas{background:linear-gradient(#b8f0ff,#87ceeb);border-radius:8px;box-shadow:0 8px 24px rgba(2,6,23,0.2)}
+.panel{width:260px;background:var(--panel);padding:12px;border-radius:8px}
+.hud{display:flex;gap:12px;justify-content:center;margin-top:8px}
+#panel-content{min-height:120px}
+.shop{padding:8px}
+.shop-row{display:flex;gap:8px}
+.crate{background:#fff;padding:10px;border-radius:6px;flex:1}
+.inventory{margin-top:10px}
+button.small{padding:6px 8px}
+footer{margin-top:12px;color:#034}
+.badge{display:inline-block;padding:4px 8px;background:#fff5;border-radius:6px;margin:4px;border:1px solid #ddd}

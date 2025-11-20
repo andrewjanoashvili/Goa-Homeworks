@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>99 Nights in the Forest — Demo</title>
+  <style>
+    :root{--bg:#071021;--panel:#0f1724;--accent:#ff6b6b;--muted:#9aa8bf}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#001119,#041029);color:#e6eef8;}
+    .wrap{max-width:1100px;margin:14px auto;padding:12px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{margin:0;font-size:18px}
+    .game-row{display:flex;gap:12px;margin-top:12px}
+    .panel{width:320px;background:var(--panel);padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,0.03)}
+    .canvas-wrap{flex:1;background:linear-gradient(180deg,#072634,#0b3946);padding:8px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+    canvas{background:#071a12;border-radius:6px;box-shadow:0 12px 40px rgba(0,0,0,0.6)}
+    .hud{display:flex;flex-direction:column;gap:8px}
+    .row{display:flex;justify-content:space-between;align-items:center}
+    button{background:var(--accent);border:0;color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer}
+    .small{font-size:13px;padding:6px}
+    .muted{color:var(--muted);font-size:13px}
+    .shop-item{background:rgba(255,255,255,0.02);padding:8px;border-radius:8px;margin-bottom:8px}
+    .big{font-size:20px;font-weight:700}
+    footer{margin-top:12px;color:#7c98a8;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>99 Nights in the Forest — Demo (Single-player)</h1>
+      <div class="muted">Controls: Move=WASD/Arrows • Action=Space • Shop=Q • Pause=P</div>
+    </header>
+    <button id="updates-btn" title="Changelog" style="position:fixed;right:14px;top:14px;z-index:50;padding:8px 10px;border-radius:8px;background:#2b6cff;border:0;color:#fff;cursor:pointer">Updates</button>
+
+    <div class="game-row">
+      <div class="canvas-wrap">
+        <canvas id="game" width="900" height="600" aria-label="99 nights game"></canvas>
+      </div>
+
+      <aside class="panel">
+        <div class="hud">
+          <div class="row"><div>Night</div><div id="night" class="big">0</div></div>
+          <div class="row"><div>Level</div><div id="plevel" class="big">1</div></div>
+          <div class="row"><div>XP</div><div id="pxp" class="big">0</div></div>
+          <div class="row"><div>Health P1</div><div id="hp1" class="big">100</div></div>
+          <div class="row"><div>Health P2</div><div id="hp2" class="big">100</div></div>
+          <div class="row"><div>Coins</div><div><span id="coins1" class="big">0</span> • <span id="coins2" class="big">0</span></div></div>
+          <div class="row"><div>Enemies</div><div id="enemies" class="big">0</div></div>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button id="btn-start">Start</button>
+            <button id="btn-pause" class="small">Pause</button>
+            <button id="btn-shop" class="small">Shop (P1:Q / P2:F11)</button>
+            <button id="btn-ability" class="small">Use Ability (P1:E / P2:F12)</button>
+          </div>
+
+          <div id="message" class="muted" style="margin-top:10px">Survive each night. Clear the wave to advance. Max nights: 100.</div>
+          <hr style="border:none;border-top:1px solid rgba(255,255,255,0.03);margin:10px 0">
+          <div><strong>Class:</strong> <span id="player-class">Warrior</span></div>
+          <div style="margin-top:8px;color:var(--muted);font-size:13px">Choose a class and buy upgrades in the shop. No persistence — session only.</div>
+        </div>
+      </aside>
+    </div>
+
+    <div id="shop-panel" class="panel" style="display:none;margin-top:12px">
+      <h3>Class Shop</h3>
+      <div class="shop-item">
+        <div style="display:flex;justify-content:space-between"><div><strong>Warrior</strong> (Melee)</div><div>Cost: 0</div></div>
+        <div class="muted">High HP, strong melee.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button data-class="warrior" class="buy">Select</button>
+          <button data-upg="warrior_hp" class="upgrade">+Max HP (100 coins)</button>
+        </div>
+      </div>
+
+      <div class="shop-item">
+        <div style="display:flex;justify-content:space-between"><div><strong>Archer</strong> (Ranged)</div><div>Cost: 50</div></div>
+        <div class="muted">Shoot arrows at range.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button data-class="archer" class="buy">Select</button>
+          <button data-upg="archer_dmg" class="upgrade">+Damage (120 coins)</button>
+        </div>
+      </div>
+
+      <div class="shop-item">
+        <div style="display:flex;justify-content:space-between"><div><strong>Mage</strong> (AOE)</div><div>Cost: 100</div></div>
+        <div class="muted">Cast fireballs with area damage.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button data-class="mage" class="buy">Select</button>
+          <button data-upg="mage_aoe" class="upgrade">+AOE Radius (140 coins)</button>
+        </div>
+      </div>
+
+      <div class="shop-item">
+        <div style="display:flex;justify-content:space-between"><div><strong>67 Kid</strong> (Insane AoE)</div><div>Cost: 67000</div></div>
+        <div class="muted">Massive AOE burst ability. Very expensive.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button data-class="kid67" class="buy">Select</button>
+        </div>
+      </div>
+
+      <div class="shop-item">
+        <div style="display:flex;justify-content:space-between"><div><strong>Flash</strong> (Speed)</div><div>Cost: 3000</div></div>
+        <div class="muted">Very fast class. Touching enemies deals -5 HP. Ability: thunder strikes.</div>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button data-class="flash" class="buy">Select</button>
+          <button data-upg="flash_upg" class="upgrade">Flash Upgrade (4000 coins)</button>
+        </div>
+      </div>
+
+      <div style="margin-top:8px"><button id="close-shop">Close Shop</button></div>
+    </div>
+
+    <div id="stats-panel" class="panel" style="display:none;margin-top:12px">
+      <h3>Stats & Leveling (Press T)</h3>
+      <div class="muted">Level: <span id="lvl-display">1</span> • XP: <span id="xp-display">0</span>/<span id="xp-next">100</span></div>
+      <div style="margin-top:8px">Unspent points: <strong id="stat-points">0</strong></div>
+      <div style="margin-top:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div>Max HP</div><div><button id="add-hp">+1</button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div>Damage</div><div><button id="add-dmg">+1</button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div>Speed</div><div><button id="add-speed">+1</button></div></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px"><div>Shield</div><div><button id="add-shield">+1</button></div></div>
+      </div>
+    </div>
+
+    <footer>Prototype demo — balance is tuned for a short playable experience. Enjoy!</footer>
+  </div>
+
+  <div id="updates-panel" style="position:fixed;right:14px;top:54px;width:320px;background:rgba(8,12,20,0.98);color:#e6eef8;border:1px solid rgba(255,255,255,0.04);padding:12px;border-radius:10px;display:none;z-index:60">
+    <h3 style="margin:0 0 8px 0">Update Log</h3>
+    <div style="max-height:260px;overflow:auto;font-size:13px">
+      <div><strong>v2.0</strong> — Upcoming major update.</div>
+      <div style="margin-top:8px"><strong>v1.9</strong> — Multiple gameplay tweaks (date: 2025-11-09)</div>
+      <div><strong>v1.8</strong> — Added Flash class & abilities.</div>
+      <div><strong>v1.7</strong> — Two-player support and chest spawns.</div>
+      <div><strong>v1.6</strong> — Boss scaling & XP system.</div>
+      <div><strong>v1.5</strong> — Hardcore and balance changes.</div>
+      <div><strong>v1.4</strong> — New enemies & visuals.</div>
+      <div><strong>v1.3</strong> — Mage AOE splash damage.</div>
+      <div><strong>v1.2</strong> — Changelog UI added.</div>
+      <div><strong>v1.0</strong> — Initial prototype release.</div>
+    </div>
+    <div style="text-align:right;margin-top:8px"><button id="close-updates">Close</button></div>
+  </div>
+
+  <script>
+  (function(){
+    const canvas = document.getElementById('game'); const ctx = canvas.getContext('2d');
+    const W = canvas.width, H = canvas.height;
+
+  // UI refs
+  const nightEl = document.getElementById('night');
+  const hp1El = document.getElementById('hp1');
+  const hp2El = document.getElementById('hp2');
+  const coins1El = document.getElementById('coins1');
+  const coins2El = document.getElementById('coins2');
+  const enemiesEl = document.getElementById('enemies');
+  const msgEl = document.getElementById('message');
+  const classEl = document.getElementById('player-class');
+  const lvlEl = document.getElementById('plevel');
+  const pxpEl = document.getElementById('pxp');
+
+    // Game state
+    let running = false, paused = false, night = 0, maxNights = 100;
+    // per-player coins persistent across deaths
+    const players = [
+      {id:1,x:W/2-40,y:H/2, vx:0,vy:0, hp:160, maxHp:160, dm:18, speed:2.2, cls:'warrior', coins:0, lastAttack:0, lastAbility:0},
+      {id:2,x:W/2+40,y:H/2, vx:0,vy:0, hp:160, maxHp:160, dm:18, speed:2.2, cls:'warrior', coins:0, lastAttack:0, lastAbility:0}
+    ];
+    let enemies = [], projectiles = [], particles = [];
+    let rafId = null, lastTime = 0;
+
+    // boss base hp that increases after each boss defeat
+    let bossBaseHp = 500;
+
+  // Player stats, level & xp (shared for now)
+  const playerState = { level:1, xp:0, xpToNext:100, statPoints:0, stats:{hp:0,dmg:0,speed:0,shield:0} };
+
+    // Player stats and class system
+    const classes = {
+      // warrior damage buffed by ~67%
+      warrior: {hp:160, maxHp:160, dmg:30, speed:2.2, type:'melee', cost:0},
+      // cooldowns are milliseconds
+      archer: {hp:110, maxHp:110, dmg:10, speed:2.6, type:'ranged', shootCooldown:2000, cost:50},
+      mage: {hp:100, maxHp:100, dmg:12, speed:2.4, type:'mage', castCooldown:4000, cost:100},
+      // kid67 ability now spawns spinning digits; 30s cooldown
+      kid67: {hp:80, maxHp:80, dmg:300, speed:2.0, type:'aoe', cost:67000, abilityCooldown:30000, abilityRadius:140},
+      // flash cooldown 10s
+      flash: {hp:120, maxHp:120, dmg:20, speed:4.4, type:'flash', cost:3000, abilityCooldown:10000}
+    };
+    // global default class for UI; individual players hold their own cls
+    let playerClass = 'warrior';
+    // active shop owner (1 or 2) when opening shop
+    let shopOwner = 1;
+
+    // Shop upgrades (session only)
+    const upgrades = {warrior_hp:false, archer_dmg:false, mage_aoe:false};
+
+  function makePlayer(){ const c = classes[playerClass]; return {x:W/2,y:H/2,vx:0,vy:0,hp:c.hp,maxHp:c.maxHp,dm:c.dmg,speed:c.speed,lastAttack:0,lastAbility:0,shield:0}; }
+
+  function resetForNight(){ enemies=[]; projectiles=[]; particles=[]; chest=null; lastChestTime=Date.now(); }
+
+  // chest state
+  let chest = null; // {x,y,expires}
+  let lastChestTime = Date.now();
+  // auto-increment id for enemies
+  let enemyIdCounter = 1;
+  // active special effects from kid67 ability
+  const kidEffects = []; // { owner, t, duration, orbitRadius, angleSpeed, hits:[] }
+
+    // enemy type definitions
+    const enemyTypes = {
+      green: {hp:50, speed:1.0, color:'#6bd26b', xp:5},
+      blue:  {hp:100, speed:1.2, color:'#6bb3d2', xp:12},
+      red:   {hp:200, speed:0.9, color:'#d26b6b', xp:30},
+      boss:  {hp:bossBaseHp, speed:0.6, color:'#9b6bd2', xp:200}
+    };
+
+    function spawnEnemiesForNight(n){
+      enemies = [];
+      // if boss night every 10th night, spawn one boss + some minions
+  if(n % 10 === 0){ const bx = Math.random()<0.5? -60:W+60; const by = Math.random()*H; enemies.push({id: enemyIdCounter++, x:bx,y:by,hp:bossBaseHp,maxHp:bossBaseHp,speed:0.6,type:'boss',color:'#7a4bd8',damage:2,xp: Math.max(200, Math.floor(bossBaseHp/4))});
+        // spawn fewer minions
+        const minions = Math.min(40, 4 + Math.floor(n*1.2));
+        for(let i=0;i<minions;i++) spawnMinion(n);
+        return;
+      }
+
+      // starting nights easier: fewer enemies early
+      const count = Math.min(200, 3 + Math.floor(n*1.2));
+      for(let i=0;i<count;i++) spawnMinion(n);
+    }
+
+    function spawnMinion(n){ const side = Math.random(); const ex = side<0.5? -30 : W+30; const ey = Math.random()*H;
+      // choose type with night thresholds
+      const r = Math.random(); let type='green';
+      // blue only from night 5
+      if(n >= 5 && r >= 0.6 && r < 0.9) type='blue';
+      // red only from night 15
+      if(n >= 15 && r >= 0.9) type='red';
+      // otherwise green
+      if(type==='green' && n>30 && Math.random()<0.25) type='red';
+      const base = enemyTypes[type] || enemyTypes.green; const hp = Math.floor(base.hp + n* (type==='green'?0.5: type==='blue'?1.0:2.0));
+      enemies.push({id: enemyIdCounter++, x:ex,y:ey,hp:hp,maxHp:hp,speed: base.speed + Math.random()*0.4 + n*0.01,type:type,color:base.color,damage:0.6,xp:base.xp});
+    }
+
+    // controls (two players)
+    const keys = {};
+    window.addEventListener('keydown', e=>{
+      keys[e.key] = true;
+      // global keys
+      if(e.key==='p' || e.key==='P') togglePause();
+      if(e.key==='t' || e.key==='T') toggleStats();
+      if(e.key==='n' || e.key==='N'){ if(running && enemies.length===0 && nightCleared) nextNight(); }
+
+      // player1 controls: WASD move, Q shop, Space attack, E ability
+      if(e.key==='q' || e.key==='Q'){ shopOwner = 1; toggleShop(); }
+      if(e.code==='Space'){ playerAction(1); }
+      if(e.key==='e' || e.key==='E'){ useAbility(1); }
+
+      // player2 controls: Arrow keys move, F11 shop, F12 attack/ability
+      if(e.key==='F11'){ shopOwner = 2; toggleShop(); }
+  if(e.key==='F12'){ const p2 = players.find(x=>x.id===2); if(p2 && p2.cls==='flash'){ useAbility(2); } else { playerAction(2); } }
+    });
+    window.addEventListener('keyup', e=>{ keys[e.key] = false; });
+
+    function togglePause(){ paused = !paused; document.getElementById('btn-pause').textContent = paused? 'Resume' : 'Pause'; }
+    function toggleShop(){ const panel = document.getElementById('shop-panel'); panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; }
+    function toggleStats(){ const panel = document.getElementById('stats-panel'); panel.style.display = panel.style.display === 'none' ? 'block' : 'none'; }
+
+    document.getElementById('btn-start').addEventListener('click', ()=>{ if(!running){ startGame(); } else if(enemies.length===0){ nextNight(); } else { // restart full run
+      stopLoop(); night = 0; /* keep players' coins persistent */ playerState.level=1; playerState.xp=0; playerState.xpToNext=100; playerState.statPoints=0; // reset players' HP and positions but keep coins
+      players.forEach(p=>{ const c = classes[p.cls] || classes.warrior; p.hp = c.hp; p.maxHp = c.maxHp; p.x = W/2 + (p.id===1?-40:40); p.y = H/2; }); startGame(); } });
+    document.getElementById('btn-pause').addEventListener('click', togglePause);
+    document.getElementById('btn-shop').addEventListener('click', toggleShop);
+    document.getElementById('close-shop').addEventListener('click', toggleShop);
+    document.getElementById('btn-ability').addEventListener('click', ()=> useAbility());
+
+    // shop handlers (delegation) with costs — purchases tied to shopOwner
+    const costMap = {warrior:0, archer:50, mage:100, kid67:67000, flash:3000};
+    document.querySelectorAll('#shop-panel .buy').forEach(b=> b.addEventListener('click', (e)=>{
+      const cls = e.target.dataset.class;
+      const cost = costMap[cls]||0;
+      const buyer = players.find(p=>p.id===shopOwner);
+      if(buyer.coins < cost){ alert('Not enough coins'); return; }
+      if(cost>0) buyer.coins -= cost;
+      buyer.cls = cls; classEl.textContent = (cls==='kid67')? '67 Kid' : capitalize(cls);
+      // update buyer stats to class defaults
+      const c = classes[cls] || classes.warrior; buyer.maxHp = c.maxHp; buyer.hp = Math.min(buyer.hp, buyer.maxHp); buyer.dm = c.dmg; buyer.speed = c.speed;
+      toggleShop(); updateUI();
+    }));
+    document.querySelectorAll('#shop-panel .upgrade').forEach(b=> b.addEventListener('click', (e)=>{ const up = e.target.dataset.upg; const costU = {warrior_hp:100, archer_dmg:120, mage_aoe:140, flash_upg:4000}[up]||100; const buyer = players.find(p=>p.id===shopOwner); if(buyer.coins < costU){ alert('Not enough coins'); return; } buyer.coins -= costU; if(up==='flash_upg') upgrades.flash_upg = true; else upgrades[up]=true; applyUpgrades(); updateUI(); }));
+
+    function applyUpgrades(){ if(upgrades.warrior_hp){ classes.warrior.maxHp = 240; classes.warrior.hp = 240; players.forEach(p=>{ if(p.cls==='warrior'){ p.maxHp=240; p.hp = Math.min(p.hp,240); } }); }
+      if(upgrades.archer_dmg){ classes.archer.dmg += 6; players.forEach(p=>{ if(p.cls==='archer') p.dm = classes.archer.dmg; }); }
+      if(upgrades.mage_aoe){ /* mage aoe flag used in projectile behavior */ }
+      if(upgrades.flash_upg){ classes.flash.dmg *= 2; classes.flash.speed *= 1.5; }
+    }
+
+    function startGame(){ // ensure only one RAF loop
+      if(rafId) cancelAnimationFrame(rafId);
+      running = true; paused = false; night = 0; playerState.level=1; playerState.xp=0; playerState.xpToNext=100; playerState.statPoints=0; bossBaseHp = 500; nightCleared = false; // don't reset players' coins
+      players.forEach(p=>{ const c = classes[p.cls] || classes.warrior; p.maxHp = c.maxHp; p.hp = c.hp; p.dm = c.dmg; p.speed = c.speed; });
+      nextNight(); lastTime = performance.now(); rafId = requestAnimationFrame(loop); }
+
+    function stopLoop(){ if(rafId) cancelAnimationFrame(rafId); rafId = null; running = false; }
+
+  function nextNight(){ if(night >= maxNights){ msgEl.textContent = `You finished ${maxNights} nights — well done!`; running=false; stopLoop(); return; } night++; nightCleared = false; resetForNight(); spawnEnemiesForNight(night); msgEl.textContent = `Night ${night} started — survive the wave!`; updateUI(); }
+
+    // playerAction(ownerId) — trigger attack for player 1 or 2
+    function playerAction(ownerId){ const now = Date.now(); const p = players.find(x=>x.id===ownerId); if(!p) return; const cls = classes[p.cls] || classes['warrior'];
+      if(cls.type==='melee'){ if(now - p.lastAttack < 400) return; p.lastAttack = now; enemies.forEach(e=>{ const d = dist(p.x,p.y,e.x,e.y); if(d < 48){ const dmg = (p.dm||cls.dmg) + playerState.stats.dmg*5; e.hp -= dmg; if(e.hp<=0) killEnemy(e, ownerId); } }); }
+      else if(cls.type==='ranged'){ if(now - (p.lastAttack||0) < (cls.shootCooldown||400)) return; p.lastAttack = now; // aim: player1 uses mouse, player2 aims at nearest enemy
+        let mx,my;
+        if(ownerId===1){ mx = mouse1.x || p.x + 1; my = mouse1.y || p.y; }
+        else { // find nearest enemy
+          let tgt = null; let md=1e9; for(const e of enemies){ const d=dist(p.x,p.y,e.x,e.y); if(d<md){ md=d; tgt=e; } }
+          if(tgt){ mx=tgt.x; my=tgt.y; } else { mx = p.x+1; my = p.y; }
+        }
+        const ang = Math.atan2(my-p.y, mx-p.x);
+        projectiles.push({x:p.x,y:p.y,vx:Math.cos(ang)*8,vy:Math.sin(ang)*8,dmg: (p.dm||cls.dmg) + playerState.stats.dmg*5,life:1500,owner:ownerId,type:'arrow'});
+      }
+      else if(cls.type==='mage'){ if(now - (p.lastAttack||0) < (cls.castCooldown||700)) return; p.lastAttack = now; let mx,my; if(ownerId===1){ mx = mouse1.x || p.x + 1; my = mouse1.y || p.y; } else { let tgt=null,md=1e9; for(const e of enemies){ const d=dist(p.x,p.y,e.x,e.y); if(d<md){ md=d; tgt=e; } } if(tgt){ mx=tgt.x; my=tgt.y; } else { mx=p.x+1; my=p.y; } }
+        const ang = Math.atan2(my-p.y, mx-p.x); projectiles.push({x:p.x,y:p.y,vx:Math.cos(ang)*4,vy:Math.sin(ang)*4,dmg:(p.dm||cls.dmg) + playerState.stats.dmg*5,life:1800,owner:ownerId,aoe: upgrades.mage_aoe?36:24,type:'fireball'}); }
+      else if(p.cls==='kid67' || cls.type==='aoe'){ useAbility(ownerId); }
+      else if(p.cls==='flash'){ // flash basic attack could be melee-on-contact; do a small dash attack
+        if(now - p.lastAttack < 200) return; p.lastAttack = now; // small shock around
+        enemies.forEach(e=>{ if(dist(p.x,p.y,e.x,e.y) < 48){ e.hp -= (p.dm||classes.flash.dmg); if(e.hp<=0) killEnemy(e, ownerId); } });
+      }
+    }
+
+    // useAbility for specific owner
+    function useAbility(ownerId){ const now = Date.now(); const p = players.find(x=>x.id===ownerId); if(!p) return;
+      if(p.cls==='kid67'){ const cls = classes.kid67; if(now - (p.lastAbility||0) < cls.abilityCooldown) return; p.lastAbility = now;
+        // spawn two spinning digit orbs (6 and 7) that orbit the player and deal 40 damage on contact
+        kidEffects.push({ owner: ownerId, t: now, duration: 4000, orbitRadius: 48, angleSpeed: 0.012, hits: [] });
+        // visual cue
+        particles.push({x:p.x-24,y:p.y-24,ttl:900,color:'#3aa7ff',text:'67',t:Date.now()}); }
+      else if(p.cls==='flash'){ const cls = classes.flash; if(now - (p.lastAbility||0) < cls.abilityCooldown) return; p.lastAbility = now; // select up to 3 random enemies
+        const targets = []; const copy = enemies.slice(); for(let i=0;i<3 && copy.length>0;i++){ const idx = Math.floor(Math.random()*copy.length); targets.push(copy.splice(idx,1)[0]); }
+        targets.forEach(t=>{ if(!t) return; t.hp -= 100; if(t.hp<=0) killEnemy(t, ownerId); // 30 to all around each
+          enemies.forEach(e=>{ if(e!==t && dist(t.x,t.y,e.x,e.y) <= 80){ e.hp -= 30; if(e.hp<=0) killEnemy(e, ownerId); } });
+        });
+        // particle burst
+        particles.push({x:p.x-24,y:p.y-24,ttl:900,color:'#ffdd33',text:'⚡',t:Date.now()});
+      }
+    }
+
+  // mouse for aiming (player1 uses mouse, player2 uses second mouse coords via keyboard aim using arrows)
+  const mouse1 = {x:W/2,y:H/2}; const mouse2 = {x:W/2,y:H/2};
+  canvas.addEventListener('mousemove', e=>{ const rect = canvas.getBoundingClientRect(); mouse1.x = e.clientX - rect.left; mouse1.y = e.clientY - rect.top; });
+  // player2 aims with arrow keys; we reuse their position as aim target
+
+  // updates panel handlers
+  document.getElementById('updates-btn').addEventListener('click', ()=>{ document.getElementById('updates-panel').style.display='block'; });
+  document.getElementById('close-updates').addEventListener('click', ()=>{ document.getElementById('updates-panel').style.display='none'; });
+
+    function killEnemy(e, ownerId){ // ownerId optional, give coins to owner
+      const coinGain = 2;
+      if(ownerId){ const p = players.find(x=>x.id===ownerId); if(p) p.coins += coinGain; }
+      else { players[0].coins += coinGain; }
+      // award xp (shared)
+      const xpGain = e.xp || Math.floor((e.maxHp||50)/4);
+      playerState.xp += xpGain;
+      checkLevelUp();
+      // if boss, increase boss hp for next boss
+      if(e.type==='boss'){ bossBaseHp += 500; }
+      const idx = enemies.indexOf(e); if(idx>=0) enemies.splice(idx,1);
+    }
+
+    function checkLevelUp(){ while(playerState.xp >= playerState.xpToNext){ playerState.xp -= playerState.xpToNext; playerState.level++; playerState.statPoints += 2; playerState.xpToNext = Math.floor(playerState.xpToNext * 1.35); msgEl.textContent = `Leveled up to ${playerState.level}! +2 stat points.`; } }
+
+    function dist(x1,y1,x2,y2){ const dx=x2-x1, dy=y2-y1; return Math.sqrt(dx*dx+dy*dy); }
+
+    function loop(now){ rafId = requestAnimationFrame(loop); if(!running) return; if(!lastTime) lastTime = now; const dt = Math.min(40, now - lastTime); lastTime = now; if(!paused) update(dt); render(); }
+
+    function update(dt){ // dt in ms
+      // player movement using dt for both players
+      players.forEach(p=>{
+        const cls = classes[p.cls] || classes.warrior;
+        const baseSpeed = (p.speed || cls.speed) + (playerState.stats.speed*0.08);
+        let vx=0, vy=0;
+        if(p.id===1){ if(keys['w']) vy=-1; if(keys['s']) vy=1; if(keys['a']) vx=-1; if(keys['d']) vx=1; }
+        else { if(keys['ArrowUp']) vy=-1; if(keys['ArrowDown']) vy=1; if(keys['ArrowLeft']) vx=-1; if(keys['ArrowRight']) vx=1; }
+        const m = Math.hypot(vx,vy); if(m>0){ vx = vx/m; vy = vy/m; p.vx = vx; p.vy = vy; } else { p.vx = 0; p.vy = 0; }
+        p.x += vx * baseSpeed * (dt/16) * 2; p.y += vy * baseSpeed * (dt/16) * 2; p.x = Math.max(10, Math.min(W-10, p.x)); p.y = Math.max(10, Math.min(H-10, p.y));
+      });
+
+  // enemies pursue nearest alive player
+      enemies.forEach(e=>{
+        // find nearest player with hp>0
+        let target = null; let minD = 1e9;
+        players.forEach(p=>{ if(p.hp>0){ const d = dist(p.x,p.y,e.x,e.y); if(d < minD){ minD = d; target = p; } } });
+        if(target){ const ang = Math.atan2(target.y - e.y, target.x - e.x); e.x += Math.cos(ang) * e.speed * (dt/16); e.y += Math.sin(ang) * e.speed * (dt/16);
+          // collision with target
+          if(dist(e.x,e.y,target.x,target.y) < 18){ const dmg = Math.max(0.1, (e.damage||0.4) - playerState.stats.shield); target.hp -= dmg; if(target.hp <= 0){ target.hp=0; // check if both dead
+                if(players.every(pp=>pp.hp<=0)){ running=false; msgEl.textContent = 'Both players died — press Start to try again.'; stopLoop(); }
+              }
+          }
+        }
+      });
+
+      // Flash running touch damage (every 300ms when moving)
+      players.forEach(p=>{
+        if(p.cls==='flash' && (Math.abs(p.vx)>0 || Math.abs(p.vy)>0)){
+          if(!p._lastTouch || Date.now()-p._lastTouch > 300){ p._lastTouch = Date.now(); const touchDmg = (upgrades.flash_upg? 10 : 5); enemies.forEach(e=>{ if(dist(p.x,p.y,e.x,e.y) < 28){ e.hp -= touchDmg; if(e.hp<=0) killEnemy(e, p.id); } }); }
+        }
+      });
+
+      // kid67 spinning-digit effects: update positions and apply touch damage
+      for(let ke = kidEffects.length-1; ke>=0; ke--){ const eff = kidEffects[ke]; const owner = players.find(x=>x.id===eff.owner); if(!owner){ kidEffects.splice(ke,1); continue; }
+        const elapsed = Date.now() - eff.t; if(elapsed > eff.duration){ kidEffects.splice(ke,1); continue; }
+        // two digits: indices 0 and 1
+        for(let i=0;i<2;i++){
+          const angle = elapsed * eff.angleSpeed + i * Math.PI; const ox = owner.x + Math.cos(angle) * eff.orbitRadius; const oy = owner.y + Math.sin(angle) * eff.orbitRadius;
+          // collision with enemies: each enemy can be hit once per effect
+          for(let j=enemies.length-1;j>=0;j--){ const e = enemies[j]; if(!e.id) continue; if(eff.hits.includes(e.id)) continue; if(dist(ox,oy,e.x,e.y) < 12){ e.hp -= 40; eff.hits.push(e.id); if(e.hp<=0) killEnemy(e, eff.owner); }
+          }
+        }
+      }
+
+      // chest spawn: one chest every 20 seconds maximum
+      if(!chest && Date.now() - lastChestTime >= 20000){ // spawn
+        const cx = 40 + Math.random()*(W-80); const cy = 40 + Math.random()*(H-80);
+        chest = {x:cx,y:cy, coins: 5 + Math.floor(Math.random()*16), expires: Date.now()+25000};
+        lastChestTime = Date.now();
+      }
+
+      // chest pickup
+      if(chest){ // expire
+        if(Date.now() > chest.expires){ chest = null; }
+        else {
+          players.forEach(p=>{ if(p.hp>0 && dist(p.x,p.y,chest.x,chest.y) < 24){ p.coins += chest.coins; particles.push({x:chest.x,y:chest.y,ttl:800,color:'#ffd866',text:'+'+chest.coins,t:Date.now()}); chest=null; lastChestTime = Date.now(); } });
+        }
+      }
+
+  // projectiles
+      for(let i=projectiles.length-1;i>=0;i--){ const p = projectiles[i]; p.x += p.vx; p.y += p.vy; p.life -= dt; if(p.life<=0){ projectiles.splice(i,1); continue; } if(p.owner){ // owner is player id
+          if(p.type==='fireball' || p.type==='mage'){ // mage: hit one main enemy and splash others
+            let main = null; for(let j=0;j<enemies.length;j++){ const e=enemies[j]; if(dist(p.x,p.y,e.x,e.y) < (p.aoe||24)+8){ main = e; break; } }
+            if(main){ main.hp -= p.dmg; if(main.hp<=0) killEnemy(main, p.owner); enemies.forEach(e=>{ if(e!==main && dist(main.x,main.y,e.x,e.y) <= (p.aoe||24)+8){ e.hp -= Math.round(p.dmg*0.3); if(e.hp<=0) killEnemy(e, p.owner); } }); projectiles.splice(i,1); }
+          } else if(p.type==='arrow'){ // arrow looks like arrow and pierces maybe
+            for(let j=enemies.length-1;j>=0;j--){ const e = enemies[j]; if(dist(p.x,p.y,e.x,e.y) < 12 + 8){ e.hp -= p.dmg; if(e.hp<=0) killEnemy(e, p.owner); // arrows pierce, reduce life slightly
+                  p.life -= 200; if(p.life<=0){ projectiles.splice(i,1); break; } }
+            }
+          } else { // generic
+            for(let j=enemies.length-1;j>=0;j--){ const e = enemies[j]; if(dist(p.x,p.y,e.x,e.y) < (p.aoe||8) + 8){ e.hp -= p.dmg; if(e.hp<=0) killEnemy(e, p.owner); if(!p.aoe){ projectiles.splice(i,1); break; } } }
+          }
+      } }
+
+  // chest expiry handled above; nothing else here
+
+      // remove dead enemies and handle night cleared
+      if(enemies.length===0 && running){
+        if(!nightCleared){
+          // first time we detect the cleared state for this night
+          nightCleared = true;
+          // heal each player by 10% of their max HP (once)
+          players.forEach(p=>{
+            const heal = Math.ceil((p.maxHp||100) * 0.10);
+            p.hp = Math.min(p.maxHp || 100, p.hp + heal);
+            particles.push({x:p.x,y:p.y,ttl:900,color:'#b6ff9a',text:'+'+heal,t:Date.now()});
+          });
+          msgEl.textContent = `Night ${night} cleared! You healed 10% HP. Press N or Start to continue.`;
+        } else {
+          // already cleared; instruct player
+          msgEl.textContent = `Night ${night} cleared! Press N or Start to continue.`;
+        }
+        // keep running state so UI works; waiting for player to press start or N to nextNight
+      }
+
+      // particles TTL
+      for(let i=particles.length-1;i>=0;i--){ const p=particles[i]; if(p.ttl){ if(Date.now()-p.t > p.ttl) particles.splice(i,1); } }
+
+      updateUI();
+    }
+
+    function render(){ ctx.clearRect(0,0,W,H);
+      // background
+      ctx.fillStyle = '#072a19'; ctx.fillRect(0,0,W,H);
+      // draw particles
+      particles.forEach(p=>{ if(p.text){ ctx.fillStyle=p.color; ctx.font='48px sans-serif'; ctx.fillText(p.text, p.x+20, p.y+30); } else { ctx.fillStyle=p.color; ctx.fillRect(p.x,p.y,2,2); } });
+      // draw players (player1 yellow, player2 cyan) with class visuals
+      players.forEach(p=>{
+        // draw ability particles for flash when running
+        if(p.cls==='flash' && (Math.abs(p.vx)>0 || Math.abs(p.vy)>0)){
+          for(let i=0;i<6;i++){ const rx = p.x + (Math.random()-0.5)*24; const ry = p.y + (Math.random()-0.5)*24; ctx.fillStyle = 'rgba(255,240,150,0.7)'; ctx.fillRect(rx,ry,2,2); }
+        }
+        ctx.beginPath(); ctx.fillStyle = (p.id===1? '#ffeb3b':'#4de0ff'); ctx.arc(p.x,p.y,12 + playerState.stats.hp*0.6,0,Math.PI*2); ctx.fill();
+        // class visuals: bow for archer, staff for mage
+        if(p.cls==='archer'){ ctx.strokeStyle='#8b5a2b'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(p.x-8,p.y); ctx.lineTo(p.x+12,p.y); ctx.stroke(); }
+        if(p.cls==='mage'){ ctx.fillStyle='#a56cff'; ctx.fillRect(p.x-4,p.y-18,8,18); ctx.fillStyle='rgba(255,100,40,0.9)'; ctx.beginPath(); ctx.arc(p.x + Math.cos((Date.now()/200)%Math.PI*2)*6, p.y-26,6,0,Math.PI*2); ctx.fill(); }
+      });
+      // draw kid67 spinning digits effects (if any)
+      kidEffects.forEach(eff=>{
+        const owner = players.find(x=>x.id===eff.owner); if(!owner) return; const elapsed = Date.now() - eff.t; const angSpeed = eff.angleSpeed; const rOrbit = eff.orbitRadius;
+        ctx.font = '20px sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+        for(let i=0;i<2;i++){
+          const angle = elapsed * angSpeed + i * Math.PI; const dx = owner.x + Math.cos(angle) * rOrbit; const dy = owner.y + Math.sin(angle) * rOrbit;
+          ctx.fillStyle = (i===0? '#3aa7ff' : '#ffd866'); ctx.fillText(i===0? '6' : '7', dx, dy);
+        }
+      });
+      // draw enemies
+      enemies.forEach(e=>{ ctx.fillStyle = e.color || '#d55'; ctx.beginPath(); const size = (e.type==='boss')?18:10; ctx.arc(e.x,e.y,size,0,Math.PI*2); ctx.fill(); ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fillRect(e.x-(size+6),e.y-(size+8),(size*2+12)*(e.hp/e.maxHp),4); });
+  // draw chest if present
+  if(chest){ ctx.fillStyle='#8b5a2b'; ctx.fillRect(chest.x-12,chest.y-8,24,16); ctx.fillStyle='#ffd866'; ctx.fillRect(chest.x-6,chest.y-6,12,4); ctx.fillStyle='#fff'; ctx.font='12px sans-serif'; ctx.fillText(chest.coins, chest.x-6, chest.y+22); }
+
+      // draw projectiles
+      projectiles.forEach(p=>{ if(p.type==='arrow'){ ctx.strokeStyle='#c07a2a'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(p.x - p.vx*2, p.y - p.vy*2); ctx.lineTo(p.x + p.vx*2, p.y + p.vy*2); ctx.stroke(); } else if(p.type==='fireball'){ ctx.fillStyle='#ff6a33'; ctx.beginPath(); ctx.arc(p.x,p.y,6,0,Math.PI*2); ctx.fill(); } else { ctx.fillStyle = '#ffdd99'; ctx.beginPath(); ctx.arc(p.x,p.y,4+(p.aoe?2:0),0,Math.PI*2); ctx.fill(); } });
+
+      // draw ability cooldown bars for players
+      players.forEach(p=>{
+        const cls = classes[p.cls] || classes.warrior; const cd = cls.abilityCooldown || 0; const since = Date.now() - (p.lastAbility||0); const frac = cd>0? Math.max(0, Math.min(1, since/cd)) : 1;
+        const w = 120, h=8; const x = (p.id===1?12:W-12-w); const y = 12; // top-left for p1, top-right for p2
+        ctx.fillStyle='rgba(255,255,255,0.08)'; ctx.fillRect(x,y,w,h);
+        ctx.fillStyle = frac>=1? '#56ff7a' : '#ffdd33'; ctx.fillRect(x,y, Math.floor(w*frac), h);
+        ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.strokeRect(x,y,w,h);
+      });
+      // HUD crosshair for archer/mage
+      if(classes[playerClass].type!=='melee'){ ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.beginPath(); ctx.arc(mouse.x,mouse.y,12,0,Math.PI*2); ctx.stroke(); }
+    }
+
+    function updateUI(){
+      nightEl.textContent = night;
+      // per-player hp/coins
+      hp1El.textContent = Math.floor(players[0].hp);
+      hp2El.textContent = Math.floor(players[1].hp);
+      coins1El.textContent = players[0].coins;
+      coins2El.textContent = players[1].coins;
+      enemiesEl.textContent = enemies.length;
+      classEl.textContent = (players[0].cls==='kid67')? '67 Kid' : capitalize(players[0].cls);
+      lvlEl.textContent = playerState.level;
+      pxpEl.textContent = playerState.xp + '/' + playerState.xpToNext;
+      document.getElementById('lvl-display').textContent = playerState.level;
+      document.getElementById('xp-display').textContent = playerState.xp;
+      document.getElementById('xp-next').textContent = playerState.xpToNext;
+      document.getElementById('stat-points').textContent = playerState.statPoints;
+    }
+
+    function capitalize(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
+
+    // stats panel allocation handlers
+    document.getElementById('add-hp').addEventListener('click', ()=>{ if(playerState.statPoints<=0) return; playerState.statPoints--; playerState.stats.hp += 1; // update both players' maxHp
+      players.forEach(p=>{ p.maxHp = (classes[p.cls]?.maxHp || 100) + playerState.stats.hp*20; p.hp = Math.min(p.hp + 20, p.maxHp); }); updateUI(); });
+    document.getElementById('add-dmg').addEventListener('click', ()=>{ if(playerState.statPoints<=0) return; playerState.statPoints--; playerState.stats.dmg += 1; updateUI(); });
+    document.getElementById('add-speed').addEventListener('click', ()=>{ if(playerState.statPoints<=0) return; playerState.statPoints--; playerState.stats.speed += 1; updateUI(); });
+    document.getElementById('add-shield').addEventListener('click', ()=>{ if(playerState.statPoints<=0) return; playerState.statPoints--; playerState.stats.shield += 1; updateUI(); });
+
+    // ability keyboard E also triggers; Space triggers playerAction; we added button to HUD
+
+    // wire Start button to advance nights when current wave cleared
+    document.getElementById('btn-start').addEventListener('click', ()=>{ if(!running) startGame(); else if(enemies.length===0) nextNight(); });
+
+    // initial spawn state
+    players.forEach(p=>{ const c = classes[p.cls]; p.maxHp = c.maxHp; p.hp = c.hp; p.dm = c.dmg; p.speed = c.speed; });
+    lastChestTime = Date.now(); updateUI(); render();
+  })();
+  </script>
+</body>
+</html>

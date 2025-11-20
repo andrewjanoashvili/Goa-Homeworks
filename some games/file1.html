@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Tetris — file1</title>
+  <link rel="stylesheet" href="file2.css">
+</head>
+<body>
+  <main class="wrap">
+    <h1>Tetris — file1</h1>
+    <div class="game">
+      <canvas id="board" width="240" height="480" aria-label="Tetris board"></canvas>
+      <aside class="sidebar">
+        <div class="panel">
+          <h2>Next</h2>
+          <canvas id="next" width="120" height="120"></canvas>
+        </div>
+        <div class="panel">
+          <h2>Score</h2>
+          <div id="score">0</div>
+        </div>
+        <div class="panel">
+          <h2>Lines</h2>
+          <div id="lines">0</div>
+        </div>
+        <div class="panel">
+          <button id="start">Start / Restart</button>
+          <button id="pause">Pause</button>
+        </div>
+        <div class="panel small">Controls: ← → ↓ rotate: X / ↑ / Space, P to pause</div>
+      </aside>
+    </div>
+  </main>
+
+  <script src="file3.js"></script>
+</body>
+</html>
